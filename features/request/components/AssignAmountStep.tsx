@@ -41,7 +41,10 @@ export default function AssignAmountStep({
           <input
             type="number"
             value={u.amount ?? ""}
-            onChange={(e) => updateAmount(u.id, Number(e.target.value))}
+            onChange={(e) => {
+              const value = parseInt(e.target.value, 10);
+              updateAmount(u.id, isNaN(value) ? undefined : value);
+            }}
             className="border p-1 w-24"
           />
         </div>

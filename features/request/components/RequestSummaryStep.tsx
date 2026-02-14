@@ -14,26 +14,46 @@ export default function RequestSummaryStep({
 }: RequestSummaryStepProps) {
   const [editingId, setEditingId] = useState<number | null>(null);
 
-  const finalUsers = request.users.filter(
-    (u: RequestRow) => u.isApprover && (u.amount ?? 0) > 0,
+  const [usersInSummary, setUsersInSummary] = useState(
+    request.users.filter((u) => u.isApprover && (u.amount ?? 0) > 0)
   );
 
-  const updateAmount = (id: number, amount: number) => {
+  const updateAmount = (id: number, amount: number | undefined) => {
+    // Update the parent request state
     setRequest((prev: RequestState) => ({
       ...prev,
       users: prev.users.map((u: RequestRow) =>
-        u.id === id ? { ...u, amount } : u,
+        u.id === id ? { ...u, amount } : u
       ),
     }));
+
+    // Also update the local summary state
+    setUsersInSummary((prev) =>
+      prev.map((u) => (u.id === id ? { ...u, amount } : u))
+    );
   };
 
   const deleteUser = (id: number) => {
+    // Update the parent request state
     setRequest((prev: RequestState) => ({
       ...prev,
       users: prev.users.map((u: RequestRow) =>
-        u.id === id ? { ...u, amount: 0 } : u,
+        u.id === id ? { ...u, amount: 0 } : u
       ),
     }));
+
+    // Remove from the local summary state
+    setUsersInSummary((prev) => prev.filter((u) => u.id !== id));
+  };
+
+  const handleSave = (id: number, amount: number) => {
+    if (amount > 0) {
+      setEditingId(null);
+    } else {
+      // This will now correctly remove the user from the summary list
+      deleteUser(id);
+      setEditingId(null);
+    }
   };
 
   return (
@@ -58,7 +78,7 @@ export default function RequestSummaryStep({
           + Add More Users
         </button>
       </div>
-      {finalUsers.map((u: RequestRow) => (
+      {usersInSummary.map((u: RequestRow) => (
         <div key={u.id} className="flex justify-between border p-2 mb-2">
           <span>{u.name}</span>
 
@@ -67,13 +87,16 @@ export default function RequestSummaryStep({
               <>
                 <input
                   type="number"
-                  value={u.amount}
-                  onChange={(e) => updateAmount(u.id, Number(e.target.value))}
+                  value={u.amount ?? ''}
+                  onChange={(e) => {
+                    const value = parseInt(e.target.value, 10);
+                    updateAmount(u.id, isNaN(value) ? undefined : value);
+                  }}
                   className="border p-1 w-24"
                 />
                 <button
                   className="border px-2"
-                  onClick={() => setEditingId(null)}
+                  onClick={() => handleSave(u.id, u.amount ?? 0)}
                 >
                   Save
                 </button>
